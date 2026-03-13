@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barber Pro Elite | Trading Ops</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+        
+        :root {
+            --trading-bg: #080a0d;
+            --trading-card: #11141a;
+            --trading-green: #22c55e;
+            --trading-red: #ef4444;
+            --trading-text: #e2e8f0;
+            --trading-muted: #64748b;
+        }
+
+        body {
+            background-color: var(--trading-bg);
+            color: var(--trading-text);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .glass-card {
+            background: var(--trading-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .btn-green {
+            background: var(--trading-green);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .btn-red {
+            background: transparent;
+            color: var(--trading-red);
+            border: 1px solid var(--trading-red);
+        }
+
+        .nav-link {
+            color: var(--trading-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            transition: all 0.3s;
+        }
+
+        .nav-link.active {
+            color: var(--trading-green);
+            border-bottom: 2px solid var(--trading-green);
+        }
+
+        .trading-glow-green { box-shadow: 0 0 15px rgba(34, 197, 94, 0.2); }
+        .trading-glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+
+        .modal-overlay {
+            background: rgba(5, 7, 10, 0.9);
+            backdrop-filter: blur(8px);
+        }
+
+        input, select {
+            background: rgba(0,0,0,0.3) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+        }
+
+        input:focus {
+            border-color: var(--trading-green) !important;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20 overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-[#080a0d]/90 border-b border-white/5 px-6 py-4 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-8 h-8 bg-green-500 rounded flex items-center justify-center cursor-pointer" onclick="app.toggleMobileMenu()">
+                    <i data-lucide="trending-up" class="text-black w-5 h-5"></i>
+                </div>
+                <h1 class="font-bold tracking-tighter text-lg md:text-xl italic uppercase">Barber<span class="text-green-500">Premium</span></h1>
+            </div>
+
+            <div class="hidden md:flex gap-8">
+                <button onclick="app.switchTab('dashboard')" class="nav-link active pb-1" id="tab-dashboard">DASHBOARD
+                </button>
+                <button onclick="app.switchTab('clients')" class="nav-link pb-1" id="tab-clients">CLIENTES</button>
+                <button onclick="app.switchTab('finance')" class="nav-link pb-1" id="tab-finance">MÉTRICAS</button>
+                <button onclick="app.switchTab('settings')" class="nav-link pb-1" id="tab-settings">SISTEMA</button>
+            </div>
+
+            <button onclick="app.toggleLogin()" id="admin-indicator" class="px-4 py-1.5 rounded bg-white/5 text-[10px] font-bold border border-white/10 hover:border-green-500 transition">
+                INVITADO
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden fixed inset-0 z-60 bg-[#080a0d]/95 backdrop-blur-md" onclick="app.closeMobileMenu()">
+        <div class="flex flex-col h-full" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center p-6 border-b border-white/5">
+                <h2 class="text-lg font-bold">Menú</h2>
+                <button onclick="app.closeMobileMenu()" class="p-2 text-white/70 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="flex-1 flex flex-col justify-center px-6">
+                <button onclick="app.switchTab('dashboard'); app.closeMobileMenu()" class="mobile-nav-btn py-4 text-left text-xl font-semibold text-white hover:text-green-500 transition">DASHBOARD</button>
+                <button onclick="app.switchTab('clients'); app.closeMobileMenu()" class="mobile-nav-btn py-4 text-left text-xl font-semibold text-white hover:text-green-500 transition">CLIENTES</button>
+                <button onclick="app.switchTab('finance'); app.closeMobileMenu()" class="mobile-nav-btn py-4 text-left text-xl font-semibold text-white hover:text-green-500 transition">MÉTRICAS</button>
+                <button onclick="app.switchTab('settings'); app.closeMobileMenu()" class="mobile-nav-btn py-4 text-left text-xl font-semibold text-white hover:text-green-500 transition">SISTEMA</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
+        
+        <!-- DASHBOARD -->
+        <section id="view-dashboard" class="view-section space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-card p-8 rounded-xl border-l-4 border-l-green-500 trading-glow-green">
+                    <p class="text-[10px] text-green-500 font-bold uppercase tracking-widest mb-2">Caja Barbería (50%)</p>
+                    <h2 class="text-3xl md:text-4xl font-bold mono" id="stat-barber-fund">$0.00</h2>
+                </div>
+                <div class="glass-card p-8 rounded-xl border-l-4 border-l-white/20">
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2">Caja Personal (50%)</p>
+                    <h2 class="text-3xl md:text-4xl font-bold mono" id="stat-personal-fund">$0.00</h2>
+                </div>
+                <div class="glass-card p-8 rounded-xl border-l-4 border-l-blue-500">
+                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-2">Volumen Miembros</p>
+                    <h2 class="text-3xl md:text-4xl font-bold mono" id="stat-total-clients">0</h2>
+                </div>
+                <div class="glass-card p-8 rounded-xl border-l-4 border-l-red-500">
+                    <p class="text-[10px] text-red-400 font-bold uppercase tracking-widest mb-2">Net Profit Total</p>
+                    <h2 class="text-3xl md:text-4xl font-bold mono" id="stat-net-profit">$0.00</h2>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="relative w-full max-w-md">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4"></i>
+                    <input type="text" id="search-input" placeholder="Buscar activo/cliente..." 
+                        class="w-full rounded-lg py-3 pl-12 pr-4 text-sm">
+                </div>
+                <button onclick="app.showAddClient()" class="btn-green w-full md:w-auto px-8 py-4 rounded-lg text-xs uppercase flex items-center justify-center gap-2">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Alta de Cliente
+                </button>
+            </div>
+
+            <div id="top-3-container" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- CLIENTS -->
+        <section id="view-clients" class="view-section hidden">
+            <div class="glass-card rounded-xl overflow-hidden">
+                <div class="p-4 border-b border-white/5 bg-white/[0.02]">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400">Libro de Órdenes (Clientes)</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-black/40 text-[10px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="px-6 py-4">Activo / Cliente</th>
+                                <th class="px-6 py-4 text-center">Frecuencia (Cortes)</th>
+                                <th class="px-6 py-4 text-right">Ejecución</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body" class="divide-y divide-white/[0.03]"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINANCE -->
+        <section id="view-finance" class="view-section hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 glass-card p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xs font-bold uppercase text-green-500 tracking-tighter italic">Análisis Técnico de Capital</h3>
+                        <span class="text-[10px] mono text-slate-500">Live Chart</span>
+                    </div>
+                    <div class="h-[400px]">
+                        <canvas id="financeChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-xl space-y-6">
+                    <h3 class="text-xs font-bold uppercase text-slate-400">Nueva Operación</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Monto (USD)</label>
+                            <input type="number" id="finance-amount" class="w-full rounded-lg p-4 text-2xl mono font-bold text-green-500" placeholder="0.00">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tipo de Orden</label>
+                            <select id="finance-type" class="w-full rounded-lg p-4 text-xs font-bold uppercase">
+                                <option value="ingreso" class="text-green-500">BUY / INGRESO (+)</option>
+                                <option value="egreso" class="text-red-500">SELL / GASTO (-)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Referencia</label>
+                            <input type="text" id="finance-note" class="w-full rounded-lg p-4 text-xs" placeholder="Concepto...">
+                        </div>
+                        <button onclick="app.addTransaction()" class="btn-green w-full py-4 rounded-lg text-[10px] uppercase tracking-widest">Ejecutar Orden</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-xl overflow-hidden">
+                <div class="p-4 border-b border-white/5 bg-white/[0.02]">
+                    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400">Historial de Transacciones</h2>
+                </div>
+                <div class="max-h-80 overflow-y-auto">
+                    <table class="w-full text-left text-sm">
+                        <tbody id="history-table-body" class="divide-y divide-white/[0.03]"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS -->
+        <section id="view-settings" class="view-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-8 rounded-xl">
+                    <h3 class="text-sm font-bold uppercase text-green-500 mb-6">Staking / Recompensas</h3>
+                    <div id="rewards-edit-list" class="space-y-3"></div>
+                    <button onclick="app.addNewReward()" class="w-full mt-4 border border-dashed border-white/10 py-3 rounded-lg text-[10px] text-slate-500 uppercase font-bold">+ Agregar Escala</button>
+                    <button onclick="app.saveRewards()" class="btn-green w-full mt-4 py-3 rounded-lg text-[10px] uppercase">Guardar Protocolos</button>
+                </div>
+                <div class="glass-card p-8 rounded-xl bg-red-500/5">
+                    <h3 class="text-sm font-bold uppercase text-red-500 mb-4">Hard Reset</h3>
+                    <p class="text-xs text-slate-500 mb-6 font-mono">ADVERTENCIA: Esta acción eliminará el historial de la blockchain local de forma permanente.</p>
+                    <button onclick="app.factoryReset()" class="btn-red w-full py-3 rounded-lg text-[10px] uppercase font-bold hover:bg-red-500 hover:text-black transition">Eliminar Base de Datos</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODALS -->
+    <!-- Add/Edit Client -->
+    <div id="modal-client" class="hidden fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-sm p-10 rounded-2xl border-white/10">
+            <h3 class="text-xl font-bold italic mb-6" id="modal-client-title">Nuevo Perfil de Cliente</h3>
+            <div class="space-y-4">
+                <input type="hidden" id="edit-client-id">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nombre Completo</label>
+                    <input type="text" id="client-name" class="w-full rounded-lg p-4 text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Teléfono (WhatsApp)</label>
+                    <input type="text" id="client-phone" placeholder="Ej: 50371234567" class="w-full rounded-lg p-4 text-sm mono text-green-500">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="app.closeModals()" class="flex-1 text-slate-500 text-[10px] font-bold uppercase">Cancelar</button>
+                    <button onclick="app.saveClient()" class="btn-green flex-[2] py-3 rounded-lg text-[10px] uppercase">Validar Perfil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cut Modal -->
+    <div id="modal-cut" class="hidden fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-sm p-10 rounded-2xl">
+            <h3 class="text-xl font-bold text-green-500 italic mb-2">Nueva Operación</h3>
+            <p id="cut-client-name" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-6"></p>
+            <input type="hidden" id="cut-client-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Servicio Ejecutado</label>
+                    <select id="cut-concept" class="w-full rounded-lg p-4 text-xs font-bold uppercase">
+                        <option value="Corte Master">Corte Master</option>
+                        <option value="Combo Imperial">Combo Imperial</option>
+                        <option value="Afeitado">Afeitado</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Valor de la Transacción</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 font-bold">$</span>
+                        <input type="number" id="cut-price" value="15" class="w-full rounded-lg p-4 pl-8 text-2xl mono font-bold text-green-500">
+                    </div>
+                </div>
+                <button onclick="app.confirmCut()" class="btn-green w-full py-4 rounded-lg text-[10px] uppercase tracking-[0.2em] mt-2">Confirmar Profit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login -->
+    <div id="modal-login" class="hidden fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-xs p-10 rounded-2xl text-center">
+            <div class="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20">
+                <i data-lucide="shield-check" class="text-green-500 w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold mb-6">Autenticación de Terminal</h3>
+            <div class="space-y-4">
+                <input type="text" id="login-user" placeholder="Operador" class="w-full rounded-lg p-4 text-sm">
+                <input type="password" id="login-pass" placeholder="Master Key" class="w-full rounded-lg p-4 text-sm">
+                <button onclick="app.processLogin()" class="btn-green w-full py-3 rounded-lg text-[10px] uppercase">Acceder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prize -->
+    <div id="modal-prize" class="hidden fixed inset-0 z-[110] modal-overlay flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-sm p-10 rounded-3xl text-center border-green-500/30 trading-glow-green">
+            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="zap" class="text-black w-8 h-8"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">RECOMPENSA ACTIVA</h3>
+            <p id="prize-client-name" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-6"></p>
+            <div class="bg-black/50 border border-green-500/20 p-6 rounded-xl mb-6">
+                <p id="prize-description" class="text-green-500 text-lg font-bold uppercase"></p>
+            </div>
+            <button onclick="app.closeModals()" class="btn-green w-full py-4 rounded-xl text-[10px] uppercase">Canjear y Continuar</button>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[120] space-y-2"></div>
+
+    <script>
+        class TradingBarberApp {
+            constructor() {
+                this.db = JSON.parse(localStorage.getItem('barber_trading_v1')) || {
+                    clients: [],
+                    transactions: [],
+                    config: {
+                        rewards: [
+                            { cuts: 5, prize: "Tratamiento Facial" },
+                            { cuts: 10, prize: "Corte Gratis" }
+                        ]
+                    }
+                };
+                this.isAdmin = sessionStorage.getItem('trading_admin') === 'true';
+                this.chart = null;
+                this.init();
+            }
+
+            init() {
+                lucide.createIcons();
+                this.updateAuthUI();
+                this.refresh();
+                document.getElementById('search-input').addEventListener('input', (e) => this.renderClients(e.target.value));
+            }
+
+            save() { localStorage.setItem('barber_trading_v1', JSON.stringify(this.db)); }
+
+            refresh() {
+                this.renderDashboard();
+                this.renderClients();
+                this.renderSettings();
+            }
+
+            switchTab(id) {
+                if ((id === 'finance' || id === 'settings') && !this.isAdmin) {
+                    this.showToast('Acceso Restringido: Requiere privilegios de Operador', 'error');
+                    this.toggleLogin();
+                    return;
+                }
+                document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
+                document.getElementById(`view-${id}`).classList.remove('hidden');
+                document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tab-${id}`)?.classList.add('active');
+                if (id === 'finance') setTimeout(() => this.renderFinance(), 100);
+                lucide.createIcons();
+            }
+
+            // --- TRADING CHART (PUNTOS Y LINEA) ---
+            renderFinance() {
+                const ctx = document.getElementById('financeChart').getContext('2d');
+                if (this.chart) this.chart.destroy();
+
+                let balance = 0;
+                const dataPoints = this.db.transactions.map(t => {
+                    balance += (t.type === 'ingreso' ? t.amount : -t.amount);
+                    return balance;
+                });
+
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dataPoints.map((_, i) => i + 1),
+                        datasets: [{
+                            label: 'Balance de Capital',
+                            data: dataPoints,
+                            borderColor: '#22c55e',
+                            backgroundColor: (context) => {
+                                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                                gradient.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+                                gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+                                return gradient;
+                            },
+                            borderWidth: 2,
+                            pointBackgroundColor: '#22c55e',
+                            pointBorderColor: '#080a0d',
+                            pointBorderWidth: 2,
+                            pointRadius: 4, // Puntos visibles
+                            pointHoverRadius: 6,
+                            tension: 0.3, // Curvatura suave entre puntos
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { display: false } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { family: 'JetBrains Mono' } } }
+                        }
+                    }
+                });
+
+                const hist = document.getElementById('history-table-body');
+                hist.innerHTML = '';
+                [...this.db.transactions].reverse().forEach(t => {
+                    hist.innerHTML += `
+                        <tr class="hover:bg-white/[0.02] transition">
+                            <td class="px-6 py-4 font-bold text-xs">${t.concept}</td>
+                            <td class="px-6 py-4 text-[10px] text-slate-500 uppercase">${t.date}</td>
+                            <td class="px-6 py-4 text-right mono font-bold ${t.type==='ingreso'?'text-green-500':'text-red-500'}">
+                                ${t.type==='ingreso'?'+':'-'}$${t.amount.toFixed(2)}
+                            </td>
+                        </tr>`;
+                });
+            }
+
+            renderDashboard() {
+                let totalIn = 0, totalOut = 0;
+                this.db.transactions.forEach(t => t.type === 'ingreso' ? totalIn += t.amount : totalOut += t.amount);
+                
+                const net = totalIn - totalOut;
+                document.getElementById('stat-barber-fund').innerText = `$${(net * 0.5).toFixed(2)}`;
+                document.getElementById('stat-personal-fund').innerText = `$${(net * 0.5).toFixed(2)}`;
+                document.getElementById('stat-total-clients').innerText = this.db.clients.length;
+                document.getElementById('stat-net-profit').innerText = `$${net.toFixed(2)}`;
+
+                const sorted = [...this.db.clients].sort((a,b) => b.totalCuts - a.totalCuts);
+                const cont = document.getElementById('top-3-container');
+                cont.innerHTML = '';
+                sorted.slice(0,3).forEach((c, i) => {
+                    cont.innerHTML += `
+                        <div class="glass-card p-4 rounded-xl flex justify-between items-center border border-green-500/10">
+                            <div>
+                                <p class="text-[8px] font-bold text-green-500 uppercase">TIER ${i+1}</p>
+                                <p class="font-bold text-sm">${c.name}</p>
+                            </div>
+                            <div class="text-xl mono font-bold text-green-500">${c.totalCuts}</div>
+                        </div>`;
+                });
+            }
+
+            renderClients(f = "") {
+                const body = document.getElementById('clients-table-body');
+                body.innerHTML = '';
+                const filtered = this.db.clients.filter(c => c.name.toLowerCase().includes(f.toLowerCase()));
+                filtered.forEach(c => {
+                    body.innerHTML += `
+                        <tr class="hover:bg-white/[0.02]">
+                            <td class="px-8 py-6">
+                                <p class="font-bold text-white">${c.name}</p>
+                                <p class="text-[10px] mono text-slate-500">${c.phone}</p>
+                            </td>
+                            <td class="px-8 py-6 text-center">
+                                <span class="mono bg-green-500/10 text-green-500 px-3 py-1 rounded text-xs font-bold">${c.totalCuts}</span>
+                            </td>
+                            <td class="px-8 py-6 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <button onclick="app.openWhatsApp('${c.phone}', '${c.name}')" class="w-10 h-10 flex items-center justify-center rounded bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-black transition"><i data-lucide="message-circle" class="w-4 h-4"></i></button>
+                                    <button onclick="app.openCutModal('${c.id}')" class="w-10 h-10 flex items-center justify-center rounded bg-white/5 text-white hover:bg-green-500 hover:text-black transition"><i data-lucide="scissors" class="w-4 h-4"></i></button>
+                                    <button onclick="app.deleteClient('${c.id}')" class="w-10 h-10 flex items-center justify-center rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+                lucide.createIcons();
+            }
+
+            // --- LÓGICA DE WHATSAPP ---
+            openWhatsApp(phone, name) {
+                if(!phone) return this.showToast('No hay teléfono', 'error');
+                const cleanPhone = phone.replace(/\D/g, '');
+                const msg = encodeURIComponent(`Hola ${name}, te saludamos de Barber Ops. Confirmamos tu próxima sesión.`);
+                window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+            }
+
+            // --- GESTIÓN DE CLIENTES ---
+            showAddClient() {
+                document.getElementById('modal-client-title').innerText = "Alta de Miembro";
+                document.getElementById('edit-client-id').value = "";
+                document.getElementById('client-name').value = "";
+                document.getElementById('client-phone').value = "";
+                document.getElementById('modal-client').classList.remove('hidden');
+            }
+
+            saveClient() {
+                const id = document.getElementById('edit-client-id').value;
+                const name = document.getElementById('client-name').value.trim();
+                const phone = document.getElementById('client-phone').value.trim();
+                if(!name || !phone) return this.showToast('Datos incompletos', 'error');
+
+                if(id) {
+                    const idx = this.db.clients.findIndex(c => c.id === id);
+                    this.db.clients[idx] = { ...this.db.clients[idx], name, phone };
+                } else {
+                    this.db.clients.push({ id: 'c'+Date.now(), name, phone, totalCuts: 0 });
+                }
+                this.save(); this.closeModals(); this.refresh();
+                this.showToast('Activo registrado correctamente');
+            }
+
+            deleteClient(id) {
+                if(!this.isAdmin) return this.showToast('Privilegios insuficientes', 'error');
+                if(confirm('¿Confirmar liquidación de este cliente?')) {
+                    this.db.clients = this.db.clients.filter(c => c.id !== id);
+                    this.save(); this.refresh();
+                }
+            }
+
+            // --- SERVICIOS ---
+            openCutModal(id) {
+                const c = this.db.clients.find(c => c.id === id);
+                document.getElementById('cut-client-id').value = id;
+                document.getElementById('cut-client-name').innerText = c.name;
+                document.getElementById('modal-cut').classList.remove('hidden');
+            }
+
+            confirmCut() {
+                const id = document.getElementById('cut-client-id').value;
+                const price = Number(document.getElementById('cut-price').value);
+                const concept = document.getElementById('cut-concept').value;
+                const client = this.db.clients.find(c => c.id === id);
+
+                client.totalCuts++;
+                this.db.transactions.push({
+                    amount: price,
+                    type: 'ingreso',
+                    concept: `SERVICIO: ${concept} (${client.name})`,
+                    date: new Date().toLocaleString()
+                });
+
+                this.save(); this.closeModals(); this.refresh();
+                this.checkPrize(client);
+            }
+
+            checkPrize(client) {
+                const prize = this.db.config.rewards.find(r => r.cuts === client.totalCuts);
+                if(prize) {
+                    document.getElementById('prize-client-name').innerText = client.name;
+                    document.getElementById('prize-description').innerText = prize.prize;
+                    document.getElementById('modal-prize').classList.remove('hidden');
+                } else {
+                    this.showToast('Operación Finalizada (Profit)');
+                }
+            }
+
+            addTransaction() {
+                const amt = Number(document.getElementById('finance-amount').value);
+                const type = document.getElementById('finance-type').value;
+                const note = document.getElementById('finance-note').value || 'Ajuste de Capital';
+                if(!amt) return;
+
+                this.db.transactions.push({
+                    amount: amt,
+                    type: type,
+                    concept: note.toUpperCase(),
+                    date: new Date().toLocaleString()
+                });
+                this.save(); this.refresh(); this.renderFinance();
+                document.getElementById('finance-amount').value = '';
+                this.showToast('Transacción Procesada');
+            }
+
+            // --- CONFIG ---
+            renderSettings() {
+                const cont = document.getElementById('rewards-edit-list');
+                cont.innerHTML = '';
+                this.db.config.rewards.forEach((r, i) => {
+                    cont.innerHTML += `
+                        <div class="flex gap-2 items-center bg-black/40 p-3 rounded-lg border border-white/5">
+                            <input type="number" value="${r.cuts}" class="w-12 p-1 text-center text-green-500 font-bold" onchange="app.updR(${i},'cuts',this.value)">
+                            <input type="text" value="${r.prize}" class="flex-1 p-1 text-xs text-slate-400" onchange="app.updR(${i},'prize',this.value)">
+                        </div>`;
+                });
+            }
+            updR(i,k,v) { this.db.config.rewards[i][k] = k==='cuts'?Number(v):v; }
+            addNewReward() { this.db.config.rewards.push({cuts:0, prize:"Nuevo Reward"}); this.renderSettings(); }
+            saveRewards() { this.save(); this.showToast('Protocolos Guardados'); }
+
+            // --- AUTH ---
+            toggleLogin() {
+                if(this.isAdmin) {
+                    this.isAdmin = false; sessionStorage.removeItem('trading_admin');
+                    this.updateAuthUI(); this.switchTab('dashboard');
+                } else document.getElementById('modal-login').classList.remove('hidden');
+            }
+            processLogin() {
+                if(document.getElementById('login-user').value === 'admin' && document.getElementById('login-pass').value === '123') {
+                    this.isAdmin = true; sessionStorage.setItem('trading_admin', 'true');
+                    this.updateAuthUI(); this.closeModals(); this.showToast('Acceso Nivel Operador');
+                } else this.showToast('Key inválida', 'error');
+            }
+            updateAuthUI() {
+                const ind = document.getElementById('admin-indicator');
+                ind.innerText = this.isAdmin ? 'OPERADOR' : 'INVITADO';
+                ind.className = `px-4 py-1.5 rounded text-[10px] font-bold border transition ${this.isAdmin ? 'bg-green-500 text-black border-green-500' : 'bg-white/5 text-slate-500 border-white/10'}`;
+            }
+
+            closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden')); }
+            showToast(msg, type='info') {
+                const t = document.createElement('div');
+                t.className = `p-4 rounded-lg text-[10px] font-bold uppercase tracking-widest animate-bounce shadow-xl border ${type==='error'?'bg-red-500/10 text-red-500 border-red-500':'bg-green-500/10 text-green-500 border-green-500'}`;
+                t.innerText = msg;
+                document.getElementById('toast-container').appendChild(t);
+                setTimeout(()=>t.remove(), 3000);
+            }
+            factoryReset() { if(confirm('¿Ejecutar purga total?')) { localStorage.clear(); location.reload(); } }
+
+            // --- MOBILE MENU ---
+            toggleMobileMenu() {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            }
+            closeMobileMenu() {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            }
+        }
+        const app = new TradingBarberApp();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
